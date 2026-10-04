@@ -22,7 +22,7 @@ import vn.com.agribank.service.agribankservicecv.entity.Ticket;
 import vn.com.agribank.service.agribankservicecv.service.TicketService;
 
 @RestController
-@RequestMapping("/api/v1/tickets")
+@RequestMapping("/api")
 @CrossOrigin(origins = "*")
 public class TicketController {
 
@@ -33,18 +33,20 @@ public class TicketController {
         this.ticketService = ticketService;
     }
 
-    @GetMapping
+    // ==================== TICKET ENDPOINTS ====================
+
+    @GetMapping("/tickets")
     public ResponseEntity<List<Ticket>> getAllTickets() {
         return ResponseEntity.ok(ticketService.getAllTickets());
     }
 
-    @PostMapping
+    @PostMapping("/tickets")
     public ResponseEntity<Ticket> createTicket(@RequestBody Ticket ticket) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ticketService.createTicket(ticket));
     }
 
-    @PatchMapping("/{ticketId}/status")
+    @PatchMapping("/tickets/{ticketId}/status")
     public ResponseEntity<Ticket> updateTicketStatus(
             @PathVariable Long ticketId,
             @RequestBody Map<String, Object> request) {
@@ -56,7 +58,7 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.updateTicketStatus(ticketId, status));
     }
 
-    @GetMapping("/{ticketId}/comments")
+    @GetMapping("/tickets/{ticketId}/comments")
     public ResponseEntity<List<Map<String, Object>>> getComments(@PathVariable Long ticketId) {
         List<Map<String, Object>> comments = commentStore.stream()
                 .filter(comment -> ticketId.equals(comment.get("ticketId")))
@@ -64,7 +66,7 @@ public class TicketController {
         return ResponseEntity.ok(comments);
     }
 
-    @PostMapping("/{ticketId}/comments")
+    @PostMapping("/tickets/{ticketId}/comments")
     public ResponseEntity<Map<String, Object>> addComment(
             @PathVariable Long ticketId,
             @RequestBody Map<String, Object> commentData) {
@@ -74,5 +76,26 @@ public class TicketController {
         comment.put("createdAt", LocalDateTime.now());
         commentStore.add(comment);
         return ResponseEntity.status(HttpStatus.CREATED).body(comment);
+    }
+
+    // ==================== BỔ SUNG CÁC API PHỤC VỤ DASHBOARD ====================
+
+    @GetMapping("/categories")
+    public ResponseEntity<List<Map<String, Object>>> getCategories() {
+        return ResponseEntity.ok(List.of(
+            Map.of("id", 1, "name", "Core Banking"),
+            Map.of("id", 2, "name", "Phần mềm & Ứng dụng"),
+            Map.of("id", 3, "name", "Mạng & Thẻ ATM")
+        ));
+    }
+
+    @GetMapping("/notifications")
+    public ResponseEntity<List<Map<String, Object>>> getNotifications() {
+        return ResponseEntity.ok(List.of());
+    }
+
+    @GetMapping("/users")
+    public ResponseEntity<List<Map<String, Object>>> getUsers() {
+        return ResponseEntity.ok(List.of());
     }
 }
