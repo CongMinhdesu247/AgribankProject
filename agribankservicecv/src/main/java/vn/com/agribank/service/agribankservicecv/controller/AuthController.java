@@ -10,16 +10,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/auth")
+@RequestMapping("/api/auth") // Thêm /api vào đây cho đồng bộ với TicketController
 public class AuthController {
 
-    // 1. API Đăng nhập (/auth/login)
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody Map<String, Object> credentials) {
         String employeeCode = (String) credentials.get("employeeCode");
         String accountType = (String) credentials.get("accountType");
 
-        // Tạo dữ liệu phản hồi trả về cho Frontend
         Map<String, Object> response = new HashMap<>();
         response.put("token", "agri_token_" + System.currentTimeMillis());
         
@@ -33,7 +31,6 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    // 2. API Đăng ký (/auth/register)
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, Object> accountData) {
         Map<String, Object> response = new HashMap<>();
