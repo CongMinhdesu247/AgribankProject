@@ -23,7 +23,7 @@ import vn.com.agribank.service.agribankservicecv.service.TicketService;
 
 @RestController
 @RequestMapping("/api/v1/tickets")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class TicketController {
 
     private final List<Map<String, Object>> commentStore = new CopyOnWriteArrayList<>();
