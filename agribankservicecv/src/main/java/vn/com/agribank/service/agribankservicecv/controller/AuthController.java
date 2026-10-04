@@ -19,35 +19,41 @@ public class AuthController {
     public ResponseEntity<?> login(@RequestBody Map<String, Object> credentials) {
         String employeeCode = (String) credentials.get("employeeCode");
         String accountType = (String) credentials.get("accountType");
+        String role = normalizeRole(accountType);
 
-        // Nếu accountType là USER hoặc rỗng, chuẩn hóa thành CAN_BO để khớp giao diện
-        String typeVal = (accountType != null && !accountType.isBlank()) ? accountType : "CAN_BO";
-        if ("USER".equalsIgnoreCase(typeVal)) {
-            typeVal = "CAN_BO";
-        }
+        String empCodeVal = (employeeCode != null && !employeeCode.isBlank()) ? employeeCode : "NV001";
 
         Map<String, Object> response = new HashMap<>();
         response.put("token", "agri_token_" + System.currentTimeMillis());
         
         Map<String, Object> user = new HashMap<>();
-        user.put("employeeCode", employeeCode);
-        user.put("accountType", "CAN_BO"); // Trả về CAN_BO cho khớp điều kiện React
-        user.put("role", "CAN_BO");
-        user.put("type", "CAN_BO");
-        user.put("fullName", "Cán bộ " + employeeCode);
+        user.put("employeeCode", empCodeVal);
+        // Dùng cùng tên role mà frontend kiểm tra để hiển thị đúng màn hình.
+        user.put("accountType", role);
+        user.put("role", role);
+        user.put("type", role);
+        user.put("userType", role);
+        user.put("fullName", "Cán bộ " + empCodeVal);
         
         response.put("user", user);
-
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody Map<String, Object> accountData) {
         Map<String, Object> response = new HashMap<>();
+        String role = normalizeRole((String) accountData.get("accountType"));
+        Map<String, Object> user = new HashMap<>(accountData);
+        user.put("accountType", role);
+        user.put("role", role);
+
         response.put("message", "Tạo tài khoản thành công!");
         response.put("token", "agri_token_" + System.currentTimeMillis());
-        response.put("user", accountData);
-
+        response.put("user", user);
         return ResponseEntity.ok(response);
+    }
+
+    private String normalizeRole(String accountType) {
+        return "IT_STAFF".equalsIgnoreCase(accountType) ? "IT_STAFF" : "USER";
     }
 }

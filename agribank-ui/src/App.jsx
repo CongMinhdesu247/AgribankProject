@@ -20,11 +20,24 @@ import './App.css';
 
 const TWO_DAYS_IN_MS = 2 * 24 * 60 * 60 * 1000;
 
+const normalizeUserRole = (user) => {
+  if (!user) return user;
+
+  const role = String(user.role || user.accountType || user.type || user.userType || '').toUpperCase();
+  if (['IT_STAFF', 'CAN_BO_IT', 'TECHNICIAN'].includes(role)) {
+    return { ...user, role: 'IT_STAFF' };
+  }
+  if (['USER', 'CAN_BO_SU_DUNG', 'CAN_BO', 'REPORTER'].includes(role)) {
+    return { ...user, role: 'USER' };
+  }
+  return user;
+};
+
 function App() {
   const [currentUser, setCurrentUser] = useState(() => {
     const savedToken = localStorage.getItem('agri_token');
     const savedUser = localStorage.getItem('agri_user');
-    return savedToken && savedUser ? JSON.parse(savedUser) : null;
+    return savedToken && savedUser ? normalizeUserRole(JSON.parse(savedUser)) : null;
   });
 
   const [tickets, setTickets] = useState([]);
@@ -89,9 +102,10 @@ function App() {
   }, [currentUser]);
 
   const handleLoginSuccess = ({ user, token }) => {
+    const normalizedUser = normalizeUserRole(user);
     localStorage.setItem('agri_token', token);
-    localStorage.setItem('agri_user', JSON.stringify(user));
-    setCurrentUser(user);
+    localStorage.setItem('agri_user', JSON.stringify(normalizedUser));
+    setCurrentUser(normalizedUser);
   };
 
   const handleLogout = () => {
