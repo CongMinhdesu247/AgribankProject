@@ -5,12 +5,14 @@ taskkill /F /IM java.exe
 Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }   
 
 
-terminal 1: 
+terminal 1 (Node backend xử lý đăng nhập và API mà giao diện hiện đang gọi):
     cd C:\agribankPrj\agribankservicecv
-    ./mvnw spring-boot:run
+    npm run dev
 terminal 2:
     cd C:\agribankPrj\agribank-ui
     npm run dev
+
+Spring Boot trên cổng 8080 là service riêng; giao diện hiện gọi Node backend trên cổng 5000.
 
 Tài khoản đăng nhập:
     1. Migration V3 đã được áp dụng trên database agribank_helpdesk hiện tại.
