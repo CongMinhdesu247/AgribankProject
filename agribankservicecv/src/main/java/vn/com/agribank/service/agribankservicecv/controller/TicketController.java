@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,10 +14,15 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import vn.com.agribank.service.agribankservicecv.entity.Ticket;
+import vn.com.agribank.service.agribankservicecv.entity.TicketComment;
+import vn.com.agribank.service.agribankservicecv.entity.TicketNotification;
+import vn.com.agribank.service.agribankservicecv.repository.TicketCommentRepository;
+import vn.com.agribank.service.agribankservicecv.repository.TicketNotificationRepository;
 import vn.com.agribank.service.agribankservicecv.service.TicketService;
 
 @RestController
@@ -26,14 +30,18 @@ import vn.com.agribank.service.agribankservicecv.service.TicketService;
 @CrossOrigin(origins = "*")
 public class TicketController {
 
-    private final List<Map<String, Object>> commentStore = new CopyOnWriteArrayList<>();
     private final TicketService ticketService;
+    private final TicketCommentRepository commentRepository;
+    private final TicketNotificationRepository notificationRepository;
 
-    public TicketController(TicketService ticketService) {
+    public TicketController(
+            TicketService ticketService,
+            TicketCommentRepository commentRepository,
+            TicketNotificationRepository notificationRepository) {
         this.ticketService = ticketService;
+        this.commentRepository = commentRepository;
+        this.notificationRepository = notificationRepository;
     }
-
-    // ==================== TICKET ENDPOINTS ====================
 
     @GetMapping("/tickets")
     public ResponseEntity<List<Ticket>> getAllTickets() {
@@ -60,8 +68,9 @@ public class TicketController {
 
     @GetMapping("/tickets/{ticketId}/comments")
     public ResponseEntity<List<Map<String, Object>>> getComments(@PathVariable Long ticketId) {
-        List<Map<String, Object>> comments = commentStore.stream()
-                .filter(comment -> ticketId.equals(comment.get("ticketId")))
+        List<Map<String, Object>> comments = commentRepository.findByTicketIdOrderByCreatedAtAsc(ticketId)
+                .stream()
+                .map(this::toCommentResponse)
                 .toList();
         return ResponseEntity.ok(comments);
     }
@@ -70,32 +79,88 @@ public class TicketController {
     public ResponseEntity<Map<String, Object>> addComment(
             @PathVariable Long ticketId,
             @RequestBody Map<String, Object> commentData) {
-        Map<String, Object> comment = new HashMap<>(commentData);
-        comment.put("id", System.currentTimeMillis());
-        comment.put("ticketId", ticketId);
-        comment.put("createdAt", LocalDateTime.now());
-        commentStore.add(comment);
-        return ResponseEntity.status(HttpStatus.CREATED).body(comment);
-    }
+        String text = firstString(commentData, "text", "content");
+        if (text.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nội dung trao đổi không được để trống");
+        }
 
-    // ==================== BỔ SUNG CÁC API PHỤC VỤ DASHBOARD ====================
+        TicketComment comment = new TicketComment();
+        comment.setTicketId(ticketId);
+        comment.setSenderName(firstString(commentData, "sender", "senderName"));
+        if (comment.getSenderName().isBlank()) comment.setSenderName("Người dùng");
+        String senderRole = firstString(commentData, "senderRole");
+        comment.setSenderRole("IT_STAFF".equalsIgnoreCase(senderRole) ? "IT_STAFF" : "USER");
+        comment.setContent(text);
+
+        TicketComment savedComment = commentRepository.save(comment);
+        return ResponseEntity.status(HttpStatus.CREATED).body(toCommentResponse(savedComment));
+    }
 
     @GetMapping("/categories")
     public ResponseEntity<List<Map<String, Object>>> getCategories() {
         return ResponseEntity.ok(List.of(
             Map.of("id", 1, "name", "Core Banking"),
-            Map.of("id", 2, "name", "Phần mềm & Ứng dụng"),
+            Map.of("id", 2, "name", "Phần mềm & ứng dụng"),
             Map.of("id", 3, "name", "Mạng & Thẻ ATM")
         ));
     }
 
     @GetMapping("/notifications")
-    public ResponseEntity<List<Map<String, Object>>> getNotifications() {
-        return ResponseEntity.ok(List.of());
+    public ResponseEntity<List<Map<String, Object>>> getNotifications(
+            @RequestParam(defaultValue = "1") Long userId) {
+        List<Map<String, Object>> notifications = notificationRepository
+                .findTop50ByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(this::toNotificationResponse)
+                .toList();
+        return ResponseEntity.ok(notifications);
+    }
+
+    @PatchMapping("/notifications/{notificationId}/read")
+    public ResponseEntity<Map<String, Object>> markNotificationRead(
+            @PathVariable Long notificationId,
+            @RequestParam(defaultValue = "1") Long userId) {
+        TicketNotification notification = notificationRepository.findByIdAndUserId(notificationId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy thông báo"));
+        if (notification.getReadAt() == null) {
+            notification.setReadAt(LocalDateTime.now());
+            notificationRepository.save(notification);
+        }
+        return ResponseEntity.ok(Map.of("success", true));
     }
 
     @GetMapping("/users")
     public ResponseEntity<List<Map<String, Object>>> getUsers() {
         return ResponseEntity.ok(List.of());
+    }
+
+    private Map<String, Object> toCommentResponse(TicketComment comment) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", comment.getId());
+        response.put("ticketId", comment.getTicketId());
+        response.put("sender", comment.getSenderName());
+        response.put("senderRole", comment.getSenderRole());
+        response.put("text", comment.getContent());
+        response.put("createdAt", comment.getCreatedAt());
+        return response;
+    }
+
+    private Map<String, Object> toNotificationResponse(TicketNotification notification) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("id", notification.getId());
+        response.put("ticketId", notification.getTicketId());
+        response.put("type", notification.getType());
+        response.put("message", notification.getMessage());
+        response.put("createdAt", notification.getCreatedAt());
+        response.put("readAt", notification.getReadAt());
+        return response;
+    }
+
+    private String firstString(Map<String, Object> values, String... keys) {
+        for (String key : keys) {
+            Object value = values.get(key);
+            if (value instanceof String text && !text.isBlank()) return text.trim();
+        }
+        return "";
     }
 }

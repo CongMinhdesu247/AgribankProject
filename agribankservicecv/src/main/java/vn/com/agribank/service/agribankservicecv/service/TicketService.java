@@ -5,9 +5,12 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import vn.com.agribank.service.agribankservicecv.entity.Ticket;
+import vn.com.agribank.service.agribankservicecv.entity.TicketNotification;
 import vn.com.agribank.service.agribankservicecv.repository.TicketRepository;
+import vn.com.agribank.service.agribankservicecv.repository.TicketNotificationRepository;
 
 @Service
 public class TicketService {
@@ -17,6 +20,9 @@ public class TicketService {
 
     @Autowired
     private TelegramService telegramService;
+
+    @Autowired
+    private TicketNotificationRepository notificationRepository;
 
     public List<Ticket> getAllTickets() {
         return ticketRepository.findAll();
@@ -64,11 +70,28 @@ public class TicketService {
     /**
      * 2. Cập nhật Trạng thái Ticket (RESOLVED, CLOSED...)
      */
+    @Transactional
     public Ticket updateTicketStatus(Long ticketId, String newStatus) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy Ticket với ID: " + ticketId));
         
-        ticket.setStatus(newStatus.toUpperCase());
-        return ticketRepository.save(ticket);
+        String normalizedStatus = newStatus.trim().toUpperCase();
+        boolean newlyResolved = "RESOLVED".equals(normalizedStatus)
+                && !"RESOLVED".equalsIgnoreCase(ticket.getStatus());
+        ticket.setStatus(normalizedStatus);
+        Ticket savedTicket = ticketRepository.save(ticket);
+
+        if (newlyResolved && savedTicket.getReporterId() != null) {
+            TicketNotification notification = new TicketNotification();
+            notification.setUserId(savedTicket.getReporterId());
+            notification.setTicketId(savedTicket.getId());
+            notification.setType("TICKET_RESOLVED");
+            notification.setMessage(String.format(
+                    "Sự cố \"%s\" (%s) đã được giải quyết.",
+                    savedTicket.getTitle(), savedTicket.getTicketCode()));
+            notificationRepository.save(notification);
+        }
+
+        return savedTicket;
     }
 }

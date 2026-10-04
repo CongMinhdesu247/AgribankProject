@@ -87,7 +87,7 @@ function App() {
 
   const refreshNotifications = async () => {
     try {
-      setNotifications(await ticketService.getNotifications());
+      setNotifications(await ticketService.getNotifications(currentUser?.id || 1));
     } catch (error) {
       console.error('Lỗi khi tải thông báo:', error);
     }
@@ -119,7 +119,7 @@ function App() {
   const handleNotificationClick = async (notification) => {
     if (notification.readAt) return;
     try {
-      await ticketService.markNotificationRead(notification.id);
+      await ticketService.markNotificationRead(notification.id, currentUser?.id || 1);
       setNotifications((previous) => previous.map((item) => item.id === notification.id
         ? { ...item, readAt: new Date().toISOString() }
         : item));

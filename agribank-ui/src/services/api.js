@@ -122,7 +122,8 @@ export const ticketService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          performedBy: commentData.performedBy || 1,
+          sender: commentData.sender || 'Người dùng',
+          senderRole: commentData.senderRole || 'USER',
           text: commentData.text || commentData.content || ''
         }),
       });
@@ -143,14 +144,17 @@ export const ticketService = {
     return await response.json();
   },
 
-  getNotifications: async () => {
-    const response = await request('/notifications');
+  getNotifications: async (userId = 1) => {
+    const response = await request(`/notifications?userId=${encodeURIComponent(userId)}`);
     if (!response.ok) throw await readError(response, 'Không thể tải thông báo');
     return response.json();
   },
 
-  markNotificationRead: async (notificationId) => {
-    const response = await request(`/notifications/${notificationId}/read`, { method: 'PATCH' });
+  markNotificationRead: async (notificationId, userId = 1) => {
+    const response = await request(
+      `/notifications/${notificationId}/read?userId=${encodeURIComponent(userId)}`,
+      { method: 'PATCH' }
+    );
     if (!response.ok) throw await readError(response, 'Không thể cập nhật thông báo');
     return response.json();
   },

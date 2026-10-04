@@ -37,6 +37,7 @@ function TicketChatModal({ ticket, currentUser, onClose }) {
 
       await ticketService.addComment(ticket.id, {
         sender: currentUser?.fullName || 'Người dùng',
+        senderRole: currentUser?.role || 'USER',
         text: inputText
       });
 
@@ -108,7 +109,8 @@ function TicketChatModal({ ticket, currentUser, onClose }) {
             </div>
           ) : (
             comments.map((msg) => {
-              const isMe = msg.sender === currentUser?.fullName;
+              const senderName = msg.sender || msg.senderName || 'Người dùng';
+              const isMe = senderName === currentUser?.fullName;
               return (
                 <div 
                   key={msg.id} 
@@ -122,7 +124,7 @@ function TicketChatModal({ ticket, currentUser, onClose }) {
                   }}
                 >
                   <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#495057', marginBottom: '2px' }}>
-                    {msg.sender}
+                    {senderName}
                   </div>
                   <div style={{ fontSize: '13px', color: '#212529', wordBreak: 'break-word' }}>
                     {msg.text}
