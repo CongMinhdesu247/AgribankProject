@@ -1,0 +1,34 @@
+### Test API 1: Lấy danh sách toàn bộ Ticket
+GET http://localhost:8080/api/v1/tickets
+
+###
+
+### Test API 2: Tạo mới Ticket P1 (Khởi chạy Cảnh báo Telegram)
+POST http://localhost:8080/api/v1/tickets
+Content-Type: application/json
+
+{
+  "title": "Sập ứng dụng Agribank Plus trên toàn hệ thống",
+  "description": "Khách hàng không thể đăng nhập và chuyển tiền",
+  "priority": "P1",
+  "categoryId": 2,
+  "reporterId": 1
+}
+
+### Test API 3: Phân công Chuyên viên CNTT (ID: 10) tiếp nhận Ticket ID 1
+PUT http://localhost:8080/api/v1/tickets/1/assign
+Content-Type: application/json
+
+{
+  "technicianId": 10
+}
+
+###
+
+### Test API 4: Chuyển trạng thái Ticket ID 1 sang RESOLVED (Đã xử lý xong)
+PUT http://localhost:8080/api/v1/tickets/1/status
+Content-Type: application/json
+
+{
+  "status": "RESOLVED"
+}

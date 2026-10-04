@@ -1,0 +1,14 @@
+# Dependencies and generated build output
+**/node_modules/
+**/dist/
+**/target/
+
+# Local environment files and secrets
+**/.env
+**/.env.*
+!**/.env.example
+
+# Local database exports and logs
+*.sql.gz
+*.dump
+*.log

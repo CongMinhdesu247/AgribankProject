@@ -1,0 +1,31 @@
+Stop-Process -Id (Get-NetTCPConnection -LocalPort 8080).OwningProcess -Force
+taskkill /F /IM java.exe
+
+
+Get-NetTCPConnection -LocalPort 8080 -State Listen -ErrorAction SilentlyContinue | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }   
+
+
+terminal 1: 
+    cd C:\agribankPrj\agribankservicecv
+    ./mvnw spring-boot:run
+terminal 2:
+    cd C:\agribankPrj\agribank-ui
+    npm run dev
+
+Tài khoản đăng nhập:
+    1. Migration V3 đã được áp dụng trên database agribank_helpdesk hiện tại.
+       Khi dùng database khác, chạy SQL V3 một lần trước khi khởi động backend.
+    2. Migration V4 tạo bảng thông báo và đã được áp dụng trên database hiện tại.
+       Khi dùng database khác, chạy SQL V4 một lần sau V3.
+    3. agribankservicecv/.env đã được tạo cục bộ và được bỏ qua bởi Git.
+       Không chia sẻ SESSION_SECRET; chỉ cấp IT_REGISTRATION_CODE cho kỹ sư IT được phép đăng ký.
+    4. Khởi động lại Node.js. Người dùng đăng ký bằng mã nhân viên, họ tên, chi nhánh,
+       email và mật khẩu; kỹ sư IT cần thêm mã đăng ký riêng.
+
+Thông báo hoàn thành ticket:
+    Khi kỹ sư IT chuyển ticket sang RESOLVED, backend tạo thông báo cho đúng tài khoản
+    người gửi trong cùng transaction. Giao diện kiểm tra thông báo mới mỗi 15 giây;
+    nhấn vào mục trong chuông để đánh dấu đã đọc.
+
+Tài khoản hiện có được gán employee_code từ username hiện tại. Khi đăng nhập thành công,
+mật khẩu cũ trong database sẽ được chuyển sang dạng hash scrypt.

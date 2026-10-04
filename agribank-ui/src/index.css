@@ -1,0 +1,32 @@
+/* =========================================================
+   RESET TOÀN BỘ VIỀN VÀ KHUNG MẶC ĐỊNH CỦA DỰ ÁN REACT
+   ========================================================= */
+
+/* 1. Triệt tiêu toàn bộ border/outline tự động trên mọi phần tử */
+*, *::before, *::after {
+  box-sizing: border-box;
+  border: 0 solid transparent;
+  outline: none;
+}
+
+/* 2. Loại bỏ đường viền và lề trên thẻ gốc HTML & Body */
+html, body {
+  margin: 0;
+  padding: 0;
+  border: none !important;
+  outline: none !important;
+  width: 100%;
+  min-height: 100vh;
+  overflow-x: hidden; /* Chống cuộn ngang thừa */
+}
+
+/* 3. Xóa bỏ cấu hình khung căn giữa mặc định của Vite/CRA trên thẻ #root */
+#root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
