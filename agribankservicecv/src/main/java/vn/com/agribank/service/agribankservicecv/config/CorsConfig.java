@@ -1,25 +1,42 @@
-package vn.com.agribank.service.agribankservicecv.config;
+package vn.com.agribank.service.agribankservicecv.config; // Đảm bảo đúng package trong dự án của bạn
 
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.web.filter.CorsFilter;
 
 @Configuration
 public class CorsConfig {
 
+    @Value("${CORS_ORIGINS:http://localhost:5173}")
+    private String corsOrigins;
+
     @Bean
-    public WebMvcConfigurer corsConfigurer() {
-        return new WebMvcConfigurer() {
-            @Override
-            public void addCorsMappings(CorsRegistry registry) {
-                // Cho phép ứng dụng React (port 5173) truy cập toàn bộ API bắt đầu bằng /api/
-                registry.addMapping("/api/**")
-                        .allowedOrigins("http://localhost:5173")
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                        .allowedHeaders("*")
-                        .allowCredentials(true);
-            }
-        };
+    @Order(Ordered.HIGHEST_PRECEDENCE)
+    public CorsFilter corsFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        CorsConfiguration config = new CorsConfiguration();
+        
+        // Cho phép gửi credentials (cookie/token header)
+        config.setAllowCredentials(true);
+        
+        // Cấu hình danh sách domain được phép gọi API
+        if (corsOrigins.contains(",")) {
+            config.setAllowedOriginPatterns(List.of(corsOrigins.split(",")));
+        } else {
+            config.setAllowedOriginPatterns(List.of(corsOrigins, "http://localhost:5173", "https://loyal-insight-production-8590.up.railway.app"));
+        }
+        
+        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
+        
+        source.registerCorsConfiguration("/**", config);
+        return new CorsFilter(source);
     }
 }
