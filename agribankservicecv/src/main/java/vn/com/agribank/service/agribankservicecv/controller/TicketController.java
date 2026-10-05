@@ -86,6 +86,8 @@ public class TicketController {
 
         TicketComment comment = new TicketComment();
         comment.setTicketId(ticketId);
+        Object rawSenderId = commentData.get("senderId");
+        if (rawSenderId instanceof Number senderId) comment.setSenderId(senderId.longValue());
         comment.setSenderName(firstString(commentData, "sender", "senderName"));
         if (comment.getSenderName().isBlank()) comment.setSenderName("Người dùng");
         String senderRole = firstString(commentData, "senderRole");
@@ -138,6 +140,7 @@ public class TicketController {
         Map<String, Object> response = new HashMap<>();
         response.put("id", comment.getId());
         response.put("ticketId", comment.getTicketId());
+        response.put("senderId", comment.getSenderId());
         response.put("sender", comment.getSenderName());
         response.put("senderRole", comment.getSenderRole());
         response.put("text", comment.getContent());

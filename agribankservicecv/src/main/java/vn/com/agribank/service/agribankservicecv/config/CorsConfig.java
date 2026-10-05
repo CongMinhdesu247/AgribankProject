@@ -30,7 +30,7 @@ public class CorsConfig {
         if (corsOrigins.contains(",")) {
             config.setAllowedOriginPatterns(List.of(corsOrigins.split(",")));
         } else {
-            config.setAllowedOriginPatterns(List.of(corsOrigins, "http://localhost:5173", "https://loyal-insight-production-8590.up.railway.app"));
+            config.setAllowedOriginPatterns(List.of(corsOrigins, "http://localhost:5173", "agribank-helpdesk.up.railway.app"));
         }
         
         config.setAllowedHeaders(List.of("*"));

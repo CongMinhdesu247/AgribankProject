@@ -122,6 +122,7 @@ export const ticketService = {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          senderId: commentData.senderId,
           sender: commentData.sender || 'Người dùng',
           senderRole: commentData.senderRole || 'USER',
           text: commentData.text || commentData.content || ''

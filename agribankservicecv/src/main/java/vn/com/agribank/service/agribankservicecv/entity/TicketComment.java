@@ -21,6 +21,9 @@ public class TicketComment {
     @Column(name = "ticket_id", nullable = false)
     private Long ticketId;
 
+    @Column(name = "sender_id")
+    private Long senderId;
+
     @Column(name = "sender_name", nullable = false)
     private String senderName;
 
@@ -44,6 +47,9 @@ public class TicketComment {
 
     public Long getTicketId() { return ticketId; }
     public void setTicketId(Long ticketId) { this.ticketId = ticketId; }
+
+    public Long getSenderId() { return senderId; }
+    public void setSenderId(Long senderId) { this.senderId = senderId; }
 
     public String getSenderName() { return senderName; }
     public void setSenderName(String senderName) { this.senderName = senderName; }
