@@ -138,15 +138,18 @@ function App() {
     try {
       const nowISO = new Date().toISOString();
 
-      await ticketService.createTicket({
+      const createdTicket = await ticketService.createTicket({
         ...formData,
         reporterId: currentUser?.id || 1,
         createdAt: nowISO
       });
 
-      alert(formData.priority === 'P1' 
-        ? "🚨 Đã gửi sự cố P1 khẩn cấp! Cảnh báo Telegram đã được kích hoạt." 
-        : "✅ Đã tạo Ticket thành công!");
+      const successMessage = formData.priority === 'P1'
+        ? createdTicket.telegramAlertSent === true
+          ? `🚨 Ticket P1 ${createdTicket.ticketCode || ''} đã tạo và gửi cảnh báo Telegram thành công.`
+          : `Ticket P1 ${createdTicket.ticketCode || ''} đã được tạo, nhưng Telegram chưa nhận được cảnh báo. Vui lòng báo trực tiếp bộ phận IT.`
+        : "✅ Đã tạo Ticket thành công!";
+      alert(successMessage);
       
       setFormData({ 
         title: '', 

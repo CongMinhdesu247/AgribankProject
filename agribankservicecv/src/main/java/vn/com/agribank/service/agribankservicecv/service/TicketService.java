@@ -29,6 +29,11 @@ public class TicketService {
     }
 
     public Ticket createTicket(Ticket ticket) {
+        if (ticket.getPriority() == null || ticket.getPriority().isBlank()) {
+            ticket.setPriority("P3");
+        } else {
+            ticket.setPriority(ticket.getPriority().trim().toUpperCase());
+        }
         String generatedCode = "TCK-" + (System.currentTimeMillis() % 1000000);
         ticket.setTicketCode(generatedCode);
         ticket.setStatus("OPEN");
@@ -45,11 +50,12 @@ public class TicketService {
         Ticket savedTicket = ticketRepository.save(ticket);
 
         if ("P1".equalsIgnoreCase(savedTicket.getPriority())) {
-            telegramService.sendP1Alert(
+            boolean alertSent = telegramService.sendP1Alert(
                 savedTicket.getTicketCode(),
                 savedTicket.getTitle(),
                 savedTicket.getDescription()
             );
+            savedTicket.setTelegramAlertSent(alertSent);
         }
 
         return savedTicket;
