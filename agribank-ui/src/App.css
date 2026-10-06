@@ -25,14 +25,8 @@ body {
 }
 
 .login-page-shell {
-  display: flow-root;
   min-height: 100vh;
   background-color: #A81C37;
-}
-
-html:has(.login-page-shell),
-body:has(.login-page-shell) {
-  background: #A81C37;
 }
 
 /* Khung chứa rộng rãi (Không chứa đường viền lề dọc) */
