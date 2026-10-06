@@ -11,4 +11,5 @@ import vn.com.agribank.service.agribankservicecv.entity.Ticket;
 public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByStatus(String status);
     List<Ticket> findByPriority(String priority);
+    List<Ticket> findByReporterIdOrderByCreatedAtDesc(Long reporterId);
 }

@@ -108,7 +108,12 @@ function App() {
     setCurrentUser(normalizedUser);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await ticketService.logout();
+    } catch (error) {
+      console.error('Logout request failed:', error);
+    }
     setCurrentUser(null);
     setNotifications([]);
     setNotificationsOpen(false);
@@ -238,10 +243,10 @@ function App() {
 
   if (!currentUser) {
     return (
-      <>
+      <div className="login-page-shell">
         <Login onLoginSuccess={handleLoginSuccess} />
         <SiteFooter />
-      </>
+      </div>
     );
   }
 

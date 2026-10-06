@@ -27,11 +27,8 @@ public class CorsConfig {
         config.setAllowCredentials(true);
         
         // Cấu hình danh sách domain được phép gọi API
-        if (corsOrigins.contains(",")) {
-            config.setAllowedOriginPatterns(List.of(corsOrigins.split(",")));
-        } else {
-            config.setAllowedOriginPatterns(List.of(corsOrigins, "http://localhost:5173", "https://agribank-helpdesk.up.railway.app"));
-        }
+        config.setAllowedOrigins(List.of(corsOrigins.split(",")).stream()
+                .map(String::trim).filter(origin -> !origin.isBlank()).toList());
         
         config.setAllowedHeaders(List.of("*"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));

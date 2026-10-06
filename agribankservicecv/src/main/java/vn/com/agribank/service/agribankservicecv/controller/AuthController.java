@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
 
 import org.bouncycastle.crypto.generators.SCrypt;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,7 +18,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "*")
 public class AuthController {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
@@ -33,6 +33,9 @@ public class AuthController {
 
     @Value("${IT_REGISTRATION_CODE:}")
     private String itRegistrationCode;
+
+    @Value("${SESSION_SECRET:}")
+    private String sessionSecret;
 
     public AuthController(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -61,7 +64,7 @@ public class AuthController {
         }
 
         Map<String, Object> response = new HashMap<>();
-        response.put("token", "agri_token_" + System.currentTimeMillis());
+        response.put("token", createToken(((Number) account.get("id")).longValue()));
         
         Map<String, Object> user = new HashMap<>();
         Object userId = account.get("id");
@@ -129,7 +132,7 @@ public class AuthController {
 
         Map<String, Object> response = new HashMap<>();
         response.put("message", "Tạo tài khoản thành công!");
-        response.put("token", "agri_token_" + System.currentTimeMillis());
+        response.put("token", createToken(((Number) user.get("id")).longValue()));
         response.put("user", user);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -160,9 +163,7 @@ public class AuthController {
                 return MessageDigest.isEqual(actual, expected);
             }
 
-            return MessageDigest.isEqual(
-                    suppliedPassword.getBytes(StandardCharsets.UTF_8),
-                    storedPassword.getBytes(StandardCharsets.UTF_8));
+            return false;
         } catch (IllegalArgumentException exception) {
             return false;
         }
@@ -181,5 +182,24 @@ public class AuthController {
 
     private String stringValue(Object value) {
         return value instanceof String string ? string : "";
+    }
+
+    private String createToken(long userId) {
+        try {
+            if (sessionSecret == null || sessionSecret.getBytes(StandardCharsets.UTF_8).length < 32) {
+                throw new IllegalStateException("SESSION_SECRET must contain at least 32 bytes");
+            }
+            String claims = "{\"id\":" + userId + ",\"expiresAt\":"
+                    + (System.currentTimeMillis() + 30 * 60 * 1000L) + "}";
+            String payload = Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(claims.getBytes(StandardCharsets.UTF_8));
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(sessionSecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            String signature = Base64.getUrlEncoder().withoutPadding()
+                    .encodeToString(mac.doFinal(payload.getBytes(StandardCharsets.US_ASCII)));
+            return payload + "." + signature;
+        } catch (Exception exception) {
+            throw new IllegalStateException("Could not issue access token", exception);
+        }
     }
 }

@@ -28,6 +28,10 @@ public class TicketService {
         return ticketRepository.findAll();
     }
 
+    public List<Ticket> getTicketsForReporter(Long reporterId) {
+        return ticketRepository.findByReporterIdOrderByCreatedAtDesc(reporterId);
+    }
+
     public Ticket createTicket(Ticket ticket) {
         if (ticket.getPriority() == null || ticket.getPriority().isBlank()) {
             ticket.setPriority("P3");

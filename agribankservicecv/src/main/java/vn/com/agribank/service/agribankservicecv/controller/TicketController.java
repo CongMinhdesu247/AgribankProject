@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +16,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import vn.com.agribank.service.agribankservicecv.entity.Ticket;
 import vn.com.agribank.service.agribankservicecv.entity.TicketComment;
@@ -27,29 +28,35 @@ import vn.com.agribank.service.agribankservicecv.service.TicketService;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 public class TicketController {
 
     private final TicketService ticketService;
     private final TicketCommentRepository commentRepository;
     private final TicketNotificationRepository notificationRepository;
+    private final JdbcTemplate jdbcTemplate;
 
     public TicketController(
             TicketService ticketService,
             TicketCommentRepository commentRepository,
-            TicketNotificationRepository notificationRepository) {
+            TicketNotificationRepository notificationRepository,
+            JdbcTemplate jdbcTemplate) {
         this.ticketService = ticketService;
         this.commentRepository = commentRepository;
         this.notificationRepository = notificationRepository;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @GetMapping("/tickets")
-    public ResponseEntity<List<Ticket>> getAllTickets() {
-        return ResponseEntity.ok(ticketService.getAllTickets());
+    public ResponseEntity<List<Ticket>> getAllTickets(HttpServletRequest request) {
+        if ("TECHNICIAN".equals(request.getAttribute("authRole"))) {
+            return ResponseEntity.ok(ticketService.getAllTickets());
+        }
+        return ResponseEntity.ok(ticketService.getTicketsForReporter((Long) request.getAttribute("authUserId")));
     }
 
     @PostMapping("/tickets")
-    public ResponseEntity<Ticket> createTicket(@RequestBody Ticket ticket) {
+    public ResponseEntity<Ticket> createTicket(@RequestBody Ticket ticket, HttpServletRequest request) {
+        ticket.setReporterId((Long) request.getAttribute("authUserId"));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ticketService.createTicket(ticket));
     }
@@ -78,7 +85,8 @@ public class TicketController {
     @PostMapping("/tickets/{ticketId}/comments")
     public ResponseEntity<Map<String, Object>> addComment(
             @PathVariable Long ticketId,
-            @RequestBody Map<String, Object> commentData) {
+            @RequestBody Map<String, Object> commentData,
+            HttpServletRequest request) {
         String text = firstString(commentData, "text", "content");
         if (text.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Nội dung trao đổi không được để trống");
@@ -86,12 +94,11 @@ public class TicketController {
 
         TicketComment comment = new TicketComment();
         comment.setTicketId(ticketId);
-        Object rawSenderId = commentData.get("senderId");
-        if (rawSenderId instanceof Number senderId) comment.setSenderId(senderId.longValue());
-        comment.setSenderName(firstString(commentData, "sender", "senderName"));
-        if (comment.getSenderName().isBlank()) comment.setSenderName("Người dùng");
-        String senderRole = firstString(commentData, "senderRole");
-        comment.setSenderRole("IT_STAFF".equalsIgnoreCase(senderRole) ? "IT_STAFF" : "USER");
+        Long senderId = (Long) request.getAttribute("authUserId");
+        comment.setSenderId(senderId);
+        comment.setSenderName(jdbcTemplate.queryForObject(
+                "SELECT full_name FROM users WHERE id = ?", String.class, senderId));
+        comment.setSenderRole("TECHNICIAN".equals(request.getAttribute("authRole")) ? "IT_STAFF" : "USER");
         comment.setContent(text);
 
         TicketComment savedComment = commentRepository.save(comment);
@@ -109,7 +116,8 @@ public class TicketController {
 
     @GetMapping("/notifications")
     public ResponseEntity<List<Map<String, Object>>> getNotifications(
-            @RequestParam(defaultValue = "1") Long userId) {
+            @RequestParam(required = false) Long ignoredUserId, HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("authUserId");
         List<Map<String, Object>> notifications = notificationRepository
                 .findTop50ByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
@@ -121,7 +129,8 @@ public class TicketController {
     @PatchMapping("/notifications/{notificationId}/read")
     public ResponseEntity<Map<String, Object>> markNotificationRead(
             @PathVariable Long notificationId,
-            @RequestParam(defaultValue = "1") Long userId) {
+            @RequestParam(required = false) Long ignoredUserId, HttpServletRequest request) {
+        Long userId = (Long) request.getAttribute("authUserId");
         TicketNotification notification = notificationRepository.findByIdAndUserId(notificationId, userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy thông báo"));
         if (notification.getReadAt() == null) {

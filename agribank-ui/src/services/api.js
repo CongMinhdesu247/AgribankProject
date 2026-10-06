@@ -35,6 +35,13 @@ export const ticketService = {
     return response.json();
   },
 
+  logout: async () => {
+    const response = await request('/auth/logout', { method: 'POST' });
+    if (!response.ok && response.status !== 401) {
+      throw await readError(response, 'Không thể kết thúc phiên đăng nhập');
+    }
+  },
+
   // 1. Lấy toàn bộ danh sách ticket từ CSDL MySQL qua Backend
   getAllTickets: async () => {
     try {
