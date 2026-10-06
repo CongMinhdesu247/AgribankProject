@@ -243,10 +243,10 @@ function App() {
 
   if (!currentUser) {
     return (
-      <div className="login-page-shell">
+      <>
         <Login onLoginSuccess={handleLoginSuccess} />
         <SiteFooter />
-      </div>
+      </>
     );
   }
 

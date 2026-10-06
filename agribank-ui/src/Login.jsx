@@ -64,9 +64,9 @@ function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div className="login-page" style={{
+    <div style={{
       minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: '#A81C37', padding: '20px'
+      background: 'linear-gradient(180deg, #7E1225 0%, #A81C37 50%, #5C0B1B 100%)', padding: '20px'
     }}>
       <section style={{
         width: '100%', maxWidth: '460px', backgroundColor: '#FFF', borderRadius: '16px',
