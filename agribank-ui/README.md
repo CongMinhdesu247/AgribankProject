@@ -1,3 +1,29 @@
+# Agribank Helpdesk UI
+
+## Railway deployment
+
+Deploy this directory as the frontend service (Dockerfile build). Deploy
+`agribankservicecv` as a separate Node.js backend service. Set the frontend
+service variable `API_UPSTREAM` to the backend's Railway private hostname and
+port (for example, `your-backend.railway.internal:8080` for the Spring service
+in this repository, or the port assigned to the Node backend's `PORT`). The
+frontend calls `/api` on its own origin and Caddy forwards those requests to
+`API_UPSTREAM`, so the browser never tries to call `localhost` or needs a
+public backend URL.
+
+On the backend service, add the frontend's public URL (including `https://`)
+to `CORS_ORIGINS`. Keep any other origins you still use, comma-separated, for
+example `http://localhost:5173,https://your-frontend.up.railway.app`.
+
+On the backend service, configure its database variables and `SESSION_SECRET`
+(at least 32 bytes). For local Vite development, the UI still calls
+`http://localhost:5000/api` by default; start the Node backend on port 5000.
+
+`VITE_API_BASE_URL` can override the API URL at frontend build time, but leave
+it unset when using the same-origin Caddy proxy described above.
+
+---
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

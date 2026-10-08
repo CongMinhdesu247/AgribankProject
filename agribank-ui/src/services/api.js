@@ -1,5 +1,7 @@
-// Đường dẫn cơ sở tới Server Backend Node.js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+// Production uses the same-origin /api route, which Caddy forwards to the backend.
+// Keep localhost for the Vite development server unless an API URL is explicitly set.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
 const request = (path, options = {}) => {
   const token = localStorage.getItem('agri_token');
   return fetch(`${API_BASE_URL}${path}`, {

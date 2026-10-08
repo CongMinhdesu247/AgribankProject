@@ -5,8 +5,14 @@
 }
 
 :{$PORT:3000} {
-	root * dist
-	encode gzip
-	try_files {path} /index.html
-	file_server
+	handle /api/* {
+		reverse_proxy {$API_UPSTREAM:localhost:5000}
+	}
+
+	handle {
+		root * dist
+		encode gzip
+		try_files {path} /index.html
+		file_server
+	}
 }
