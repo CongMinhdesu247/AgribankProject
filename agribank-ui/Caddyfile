@@ -6,7 +6,9 @@
 
 :{$PORT:3000} {
 	handle /api/* {
-		reverse_proxy {$API_UPSTREAM:localhost:5000}
+		reverse_proxy {$API_UPSTREAM:localhost:5000} {
+			header_up -Origin
+		}
 	}
 
 	handle {

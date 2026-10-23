@@ -1,0 +1,39 @@
+services:
+  - type: web
+    name: agribank-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: agribankservicecv
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: IT_REGISTRATION_CODE
+        sync: false
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        value: "3306"
+      - key: DB_NAME
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+
+  - type: web
+    name: agribank-ui
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./agribank-ui/Dockerfile
+    dockerContext: ./agribank-ui
+    healthCheckPath: /
+    envVars:
+      - key: API_UPSTREAM
+        sync: false

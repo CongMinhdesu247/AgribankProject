@@ -96,6 +96,15 @@ if (isProduction && (!process.env.DB_USER || !process.env.DB_PASSWORD)) {
   throw new Error('DB_USER and DB_PASSWORD must be configured.');
 }
 
+app.get('/health', async (req, res) => {
+  try {
+    await db.query('SELECT 1');
+    res.json({ status: 'ok' });
+  } catch (error) {
+    res.status(503).json({ status: 'unavailable' });
+  }
+});
+
 const toPublicUser = (user) => ({
   id: user.id,
   employeeCode: user.employee_code,
