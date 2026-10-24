@@ -1,5 +1,4 @@
 FROM node:lts-alpine AS build
-
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
@@ -9,10 +8,8 @@ ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN npm run build
 
-FROM caddy:2-alpine
+FROM node:lts-alpine AS runtime
 WORKDIR /app
-COPY Caddyfile ./
-RUN caddy fmt Caddyfile --overwrite
 COPY --from=build /app/dist ./dist
-
-CMD ["caddy", "run", "--config", "Caddyfile", "--adapter", "caddyfile"]
+COPY server.cjs ./server.cjs
+CMD ["node", "server.cjs"]
