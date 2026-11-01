@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { LogIn, ShieldAlert, UserPlus } from 'lucide-react';
 import { ticketService } from './services/api';
 
@@ -141,6 +141,9 @@ function Login({ onLoginSuccess }) {
             {mode === 'login' ? <LogIn size={18} /> : <UserPlus size={18} />}
             <span>{submitting ? 'ĐANG XỬ LÝ...' : mode === 'login' ? 'ĐĂNG NHẬP' : 'TẠO TÀI KHOẢN'}</span>
           </button>
+          {submitting && <p role="status" style={{ color: '#64748B', fontSize: '13px', lineHeight: 1.5 }}>
+            Đang kết nối máy chủ. Lần truy cập đầu sau thời gian không sử dụng có thể mất khoảng một phút.
+          </p>}
           {mode === 'register' && accountType === 'IT_STAFF' && (
             <p style={{ margin: '12px 0 0', color: '#64748B', fontSize: '12px', lineHeight: 1.5 }}>
               Đăng ký kỹ sư IT cần mã do quản trị hệ thống cung cấp.

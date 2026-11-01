@@ -19,9 +19,13 @@ const mimeTypes = {
 function proxyApi(req, res) {
   let target;
   try {
-    target = new URL(req.url, upstream);
+    const incoming = new URL(req.url, 'http://localhost');
+    // The backend exposes readiness at /health, outside its /api routes.
+    const apiPath = incoming.pathname === '/api/health' ? '/health' : incoming.pathname;
+    target = new URL(apiPath + incoming.search, upstream);
   } catch {
-    res.writeHead(502).end('Invalid API_UPSTREAM');
+    res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' })
+      .end(JSON.stringify({ message: 'Địa chỉ API_UPSTREAM của máy chủ chưa hợp lệ.' }));
     return;
   }
 
@@ -41,9 +45,17 @@ function proxyApi(req, res) {
 
   proxyReq.on('error', (error) => {
     console.error('API proxy error:', error.message);
-    if (!res.headersSent) res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
-    res.end('API service unavailable');
+    if (!res.headersSent) {
+      res.writeHead(502, { 'content-type': 'application/json; charset=utf-8' });
+      res.end(JSON.stringify({ message: 'Máy chủ API chưa sẵn sàng. Vui lòng thử lại sau khoảng một phút.' }));
+    } else {
+      res.destroy();
+    }
   });
+
+  if (target.pathname === '/health') {
+    proxyReq.setTimeout(20_000, () => proxyReq.destroy(new Error('API readiness timed out')));
+  }
 
   req.pipe(proxyReq);
 }
@@ -87,5 +99,5 @@ const server = http.createServer((req, res) => {
 
 const port = Number(process.env.PORT || 3000);
 server.listen(port, '0.0.0.0', () => {
-  console.log('Frontend listening on port ' + port);
+  console.log('Frontend listening on port ' + server.address().port);
 });

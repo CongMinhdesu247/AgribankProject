@@ -1,4 +1,6 @@
-// Production uses the same-origin /api route, which Caddy forwards to the backend.
+import { readApiError, waitForApi } from './auth-request';
+
+// Production uses the same-origin /api route, which server.cjs forwards to the backend.
 // Keep localhost for the Vite development server unless an API URL is explicitly set.
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
   || (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
@@ -19,22 +21,24 @@ const postJson = (path, data) => request(path, {
   body: JSON.stringify(data)
 });
 
-const readError = async (response, fallback) => {
-  const payload = await response.json().catch(() => null);
-  return new Error(payload?.message || payload?.error || fallback);
+const readError = readApiError;
+
+const authenticate = async (path, data, fallback) => {
+  if (API_BASE_URL === '/api') {
+    await waitForApi({ fetchHealth: (signal) => request('/health', { signal }) });
+  }
+  const response = await postJson(path, data);
+  if (!response.ok) throw await readError(response, fallback);
+  return response.json();
 };
 
 export const ticketService = {
   register: async (accountData) => {
-    const response = await postJson('/auth/register', accountData);
-    if (!response.ok) throw await readError(response, 'Không thể đăng ký tài khoản');
-    return response.json();
+    return authenticate('/auth/register', accountData, 'Không thể đăng ký tài khoản');
   },
 
   login: async (credentials) => {
-    const response = await postJson('/auth/login', credentials);
-    if (!response.ok) throw await readError(response, 'Không thể đăng nhập');
-    return response.json();
+    return authenticate('/auth/login', credentials, 'Không thể đăng nhập');
   },
 
   logout: async () => {
