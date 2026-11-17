@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { waitForApi } from '../src/services/auth-request.js';
 
-test('proxy wakes the API before a single registration POST and preserves auth responses', async (t) => {
+test('proxy wakes the API before a single registration POST and preserves auth responses', { timeout: 15000 }, async (t) => {
   let checks = 0;
   let registrations = 0;
   const backend = http.createServer(async (req, res) => {
@@ -16,6 +16,7 @@ test('proxy wakes the API before a single registration POST and preserves auth r
       return;
     }
     assert.equal(req.headers.origin, undefined);
+    assert.equal(req.headers['x-forwarded-for'], '127.0.0.1');
     let body = '';
     for await (const chunk of req) body += chunk;
     assert.equal(JSON.parse(body).employeeCode, 'TEST001');
@@ -32,7 +33,7 @@ test('proxy wakes the API before a single registration POST and preserves auth r
   t.after(() => backend.close());
   const proxy = spawn(process.execPath, ['server.cjs'], {
     cwd: new URL('..', import.meta.url),
-    env: { ...process.env, PORT: '0', API_UPSTREAM: `http://127.0.0.1:${backend.address().port}` },
+    env: { ...process.env, TRUST_CLOUDFLARE: '0', PORT: '0', API_UPSTREAM: `http://127.0.0.1:${backend.address().port}` },
     stdio: ['ignore', 'pipe', 'pipe', 'ipc'],
   });
   t.after(() => proxy.kill());
@@ -42,7 +43,8 @@ test('proxy wakes the API before a single registration POST and preserves auth r
   assert.ok(port && port !== '0');
   const base = `http://127.0.0.1:${port}`;
   await waitForApi({ fetchHealth: () => fetch(`${base}/api/health`), retryMs: 1 });
-  const options = { method: 'POST', headers: { 'content-type': 'application/json', origin: base },
+  const options = { method: 'POST', headers: { 'content-type': 'application/json', origin: base,
+    'x-forwarded-for': '203.0.113.55', 'cf-connecting-ip': '203.0.113.99' },
     body: JSON.stringify({ employeeCode: 'TEST001' }) };
   const registration = await fetch(`${base}/api/auth/register`, options);
   assert.equal(registration.status, 201);

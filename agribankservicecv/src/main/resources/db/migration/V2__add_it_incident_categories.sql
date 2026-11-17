@@ -1,4 +1,6 @@
-﻿-- Add the requested helpdesk categories without duplicating existing names.
+SET NAMES utf8mb4;
+
+-- Add the requested helpdesk categories without duplicating existing names.
 -- Run against agribank_helpdesk after the categories table has been created.
 INSERT INTO categories (name)
 SELECT requested.name

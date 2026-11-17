@@ -17,6 +17,8 @@ if (fs.existsSync(envFile)) {
 }
 
 const app = express();
+// Only enable behind our private web proxy; API must not publish a host port.
+if (process.env.TRUST_WEB_PROXY === '1') app.set('trust proxy', 1);
 const PORT = Number(process.env.PORT || 5000);
 const scrypt = promisify(crypto.scrypt);
 const isProduction = process.env.NODE_ENV === 'production';

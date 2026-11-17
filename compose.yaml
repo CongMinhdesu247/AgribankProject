@@ -1,0 +1,137 @@
+name: agribank-helpdesk
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: mysql:8.4.7
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: agribank_helpdesk
+      MYSQL_USER: helpdesk
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Generate .env first}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Generate .env first}
+      TZ: Asia/Ho_Chi_Minh
+    command:
+      - --innodb-buffer-pool-size=128M
+      - --max-connections=40
+      - --performance-schema=OFF
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./ops/001-schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+      - ./agribankservicecv/src/main/resources/db/migration/V2__add_it_incident_categories.sql:/docker-entrypoint-initdb.d/002-categories.sql:ro
+      - ./agribankservicecv/src/main/resources/db/migration/V3__add_account_registration_fields.sql:/docker-entrypoint-initdb.d/003-employee-code.sql:ro
+      - ./agribankservicecv/src/main/resources/db/migration/V4__create_notifications.sql:/docker-entrypoint-initdb.d/004-notifications.sql:ro
+    networks: [data]
+    mem_limit: 768m
+    cpus: 1.0
+    pids_limit: 256
+    healthcheck:
+      test: [CMD-SHELL, 'MYSQL_PWD="$$MYSQL_PASSWORD" mysql --protocol=TCP -h 127.0.0.1 -u "$$MYSQL_USER" "$$MYSQL_DATABASE" -e "SELECT employee_code FROM users LIMIT 0; SELECT id FROM notifications LIMIT 0" >/dev/null 2>&1']
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 90s
+    logging: *logging
+
+  api:
+    image: agribank-helpdesk-api:${APP_VERSION:-hp-20261117-1}
+    build: ./agribankservicecv
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      TRUST_WEB_PROXY: "1"
+      DB_HOST: db
+      DB_PORT: "3306"
+      DB_NAME: agribank_helpdesk
+      DB_USER: helpdesk
+      DB_PASSWORD: ${DB_PASSWORD:?Generate .env first}
+      SESSION_SECRET: ${SESSION_SECRET:?Generate .env first}
+      IT_REGISTRATION_CODE: ${IT_REGISTRATION_CODE:-}
+      NODE_OPTIONS: --max-old-space-size=256
+      TZ: Asia/Ho_Chi_Minh
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [app, data]
+    read_only: true
+    tmpfs:
+      - "/tmp:size=16m,mode=1777"
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 384m
+    cpus: 1.0
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:5000/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging: *logging
+
+  web:
+    image: agribank-helpdesk-web:${APP_VERSION:-hp-20261117-1}
+    build:
+      context: ./agribank-ui
+      args:
+        VITE_API_BASE_URL: /api
+    restart: unless-stopped
+    init: true
+    environment:
+      PORT: "3000"
+      API_UPSTREAM: http://api:5000
+      TRUST_CLOUDFLARE: "1"
+      NODE_OPTIONS: --max-old-space-size=96
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8093}:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [app]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 192m
+    cpus: 0.5
+    pids_limit: 128
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/api/health',{signal:AbortSignal.timeout(4000)}).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging: *logging
+
+  tunnel:
+    image: cloudflare/cloudflared:2026.11.0
+    profiles: [public]
+    restart: unless-stopped
+    command: [tunnel, --no-autoupdate, --protocol, http2, --url, 'http://web:3000', --metrics, '127.0.0.1:20241']
+    depends_on:
+      web:
+        condition: service_healthy
+    networks: [app]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 128m
+    cpus: 0.5
+    pids_limit: 128
+    logging: *logging
+
+networks:
+  app:
+  data:
+    internal: true
+
+volumes:
+  mysql_data:

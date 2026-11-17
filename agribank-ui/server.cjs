@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const http = require('node:http');
 const https = require('node:https');
+const { isIP } = require('node:net');
 
 const root = path.join(__dirname, 'dist');
 const upstream = process.env.API_UPSTREAM || 'http://localhost:5000';
@@ -34,6 +35,15 @@ function proxyApi(req, res) {
   delete headers.connection;
   delete headers.host;
   delete headers.origin;
+  // Replace client-controlled forwarding headers. Cloudflare identity is trusted
+  // only in the HP topology, where the web port binds exclusively to localhost.
+  const cloudflareIp = req.headers['cf-connecting-ip'];
+  headers['x-forwarded-for'] = process.env.TRUST_CLOUDFLARE === '1'
+    && typeof cloudflareIp === 'string' && isIP(cloudflareIp)
+    ? cloudflareIp : req.socket.remoteAddress;
+  delete headers.forwarded;
+  delete headers['x-forwarded-host'];
+  delete headers['x-forwarded-proto'];
 
   const proxyReq = transport.request(target, {
     method: req.method,
